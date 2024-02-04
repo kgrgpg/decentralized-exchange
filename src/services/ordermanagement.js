@@ -236,15 +236,41 @@ const orderUpdatedSubject$ = new Subject();
 const orderAddedSubject$ = new Subject();
 
 function emitOrderMatched(matchInfo) {
-  orderMatchedSubject$.next(matchInfo);
+  orderMatchedSubject$.next({
+    action: 'order_matched',
+    data: {
+      orderId: matchInfo.orderId,
+      matchedWith: matchInfo.matchedWith,
+      executedQuantity: matchInfo.executedQuantity,
+      timestamp: new Date().toISOString()
+    }
+  });
 }
 
 function emitOrderUpdated(updateInfo) {
-  orderUpdatedSubject$.next(updateInfo);
+  orderUpdatedSubject$.next({
+    action: 'order_updated',
+    data: {
+      orderId: updateInfo.orderId,
+      newQuantity: updateInfo.newQuantity,
+      timestamp: new Date().toISOString()
+    }
+  });
 }
 
-function emitOrderAdded(orderDetails) {
-  orderAddedSubject$.next(orderDetails);
+function emitOrderAdded(orderInfo) {
+  orderAddedSubject$.next({
+    action: 'order_added',
+    data: {
+      orderId: orderInfo.orderId,
+      peerId: orderInfo.orderDetails.peerId,
+      price: orderInfo.orderDetails.price,
+      quantity: orderInfo.orderDetails.quantity,
+      type: orderInfo.orderDetails.type,
+      sequenceNumber: orderInfo.orderDetails.sequenceNumber,
+      timestamp: orderInfo.orderDetails.timestamp
+    }
+  });
 }
 
 
