@@ -1,0 +1,19 @@
+{
+  "name": "decentralized-exchange",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bintrees": "^1.0.2",
+    "grenache-nodejs-ws": "^0.7.10",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "rxjs": "^7.8.1"
+  }
+}
