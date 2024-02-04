@@ -39,7 +39,13 @@ function sendOrder() {
 
   if (actionType === 'ADD_ORDER') {
     const orderId = generateOrderId();
-    const newOrder = new Order(orderId, 100 + Math.floor(Math.random() * 10), 1 + Math.floor(Math.random() * 5), 'buy');
+    // Randomly choose between 'buy' and 'sell' order types
+    const orderType = Math.random() > 0.5 ? 'buy' : 'sell';
+    // Randomly generate order price and quantity
+    const orderPrice = 100 + Math.floor(Math.random() * 10);
+    const orderQuantity = 1 + Math.floor(Math.random() * 5);
+    const newOrder = new Order(orderId, orderPrice, orderQuantity, orderType);
+
     payload = { type: 'ADD_ORDER', order: newOrder };
   } else {
     // For DELETE_ORDER, you need to provide valid order IDs. This part depends on how you track or store orders.
