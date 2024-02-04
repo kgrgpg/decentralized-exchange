@@ -6,12 +6,20 @@ const { bufferTime, map } = require('rxjs/operators');
 
 // Sort buy orders by descending price, then ascending order ID
 function compareBuyOrders(a, b) {
+  if (!a || !b || !a.id || !b.id) {
+    console.error('Invalid comparison attempt between', a, 'and', b);
+    return 0;
+  }
   if (b.price !== a.price) return b.price - a.price;
   return a.id.localeCompare(b.id);
 }
 
 // Sort sell orders by ascending price, then ascending order ID
 function compareSellOrders(a, b) {
+  if (!a || !b || !a.id || !b.id) {
+    console.error('Invalid comparison attempt between', a, 'and', b);
+    return 0;
+  }
   if (a.price !== b.price) return a.price - b.price;
   return a.id.localeCompare(b.id);
 }
@@ -41,7 +49,7 @@ const ordersById = new RBTree(compareOrdersById);
  * 
  * @param {Order} order - The order to be added
  */
-function addOrderToBook(order) {
+function addOrderToBooks(order) {
   if (order.type === 'buy') {
     buyOrders.insert(order);
   } else {
@@ -50,7 +58,7 @@ function addOrderToBook(order) {
   ordersById.insert(order);
 }
 
-function deleteOrderFromBook(order) {
+function deleteOrderFromBooks(order) {
   if (order.type === 'buy') {
     buyOrders.remove(order);
   } else {
@@ -100,7 +108,7 @@ function matchAndExecuteOrder(newOrder) {
 
   if (newOrder.quantity > 0) {
     console.log(`No (further) match found for order ${newOrder.id}, adding to book.`);
-    addOrderToBook(newOrder);
+    addOrderToBooks(newOrder);
   }
 }
 
@@ -111,24 +119,26 @@ function addOrderAfterMatching(order) {
 }
 
 function deleteOrder(orderId, requestTimestamp) {
+  console.log(`Attempting to delete order with ID: ${orderId} at timestamp: ${requestTimestamp}`);
   const orderToDelete = ordersById.find({ id: orderId });
   if (!orderToDelete) {
-    console.log("Order not found:", orderId);
+    console.log(`Order not found or already deleted: ${orderId}`);
     return;
   }
 
-  // Convert strings to Date objects for comparison
+  console.log(`Found order to delete:`, orderToDelete);
+
   const orderTimestamp = new Date(orderToDelete.timestamp);
   const deletionTimestamp = new Date(requestTimestamp);
 
-  // Check if the deletion request's timestamp is equal or later than the order's timestamp
   if (deletionTimestamp >= orderTimestamp) {
     console.log(`Deleting order: ${orderId}`);
-    deleteOrderFromBook(orderId);
+    deleteOrderFromBooks(orderId);
   } else {
-    console.log(`Deletion request timestamp for order ${orderId} is earlier than the order's timestamp. Ignoring deletion request.`);
+    console.log(`Deletion timestamp for order ${orderId} is earlier than the order's timestamp. Ignoring deletion.`);
   }
 }
+
 
 
 function treeToArray(tree) {
@@ -161,8 +171,17 @@ const orderOperationsStream$ = merge(
 );
 
 // Process the sorted and buffered orders
-orderOperationsStream$.subscribe(sortedOperations => {
-  sortedOperations.forEach(operation => {
+orderOperationsStream$.subscribe({
+  next: sortedOperations => {
+    sortedOperations.forEach(processOperation);
+  },
+  error: err => {
+    console.error('Error processing operations stream', err);
+  }
+});
+
+function processOperation(operation) {
+  try {
     if (operation.operationType === 'add') {
       console.log(`Processing addition: ${operation.payload.id}`);
       addOrderAfterMatching(operation.payload);
@@ -170,11 +189,9 @@ orderOperationsStream$.subscribe(sortedOperations => {
       console.log(`Processing deletion: ${operation.payload.orderId} at ${operation.payload.timestamp}`);
       deleteOrder(operation.payload.orderId, operation.payload.timestamp);
     }
-  });
-});
-
-
-
-
+  } catch (error) {
+    console.error(`Error processing ${operation.operationType} operation for order ID: ${operation.payload.id || operation.payload.orderId}`, error);
+  }
+}
 
 module.exports = { addOrder: addOrderAfterMatching, deleteOrder, emitAddOrder, emitDeleteOrder, treeToArray };
