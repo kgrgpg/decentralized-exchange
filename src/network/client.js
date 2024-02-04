@@ -29,8 +29,32 @@ peerSub.on('disconnected', () => {
 
 // Handle incoming messages
 peerSub.on('message', (msg) => {
-  console.log('Received message:', msg);
-  // Here you can add logic to process the message
+  console.log('Received Raw message:', msg);
+  try {
+    const parsedMsg = JSON.parse(msg);
+    const { action, data } = parsedMsg;
+
+    console.log(`Received ${action} message:`, data);
+
+    switch (action) {
+      case 'order_matched':
+        // Handle order matched event
+        console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
+        break;
+      case 'order_updated':
+        // Handle order updated event
+        console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
+        break;
+      case 'order_added':
+        // Handle order added event
+        console.log(`New order added:`, data);
+        break;
+      default:
+        console.warn(`Unknown action type received: ${action}`);
+    }
+  } catch (error) {
+    console.error('Error processing message:', error);
+  }
 });
 
 // Generate a unique identifier for the peer
