@@ -19,6 +19,14 @@ function compareOrdersById(a, b) {
   return a.id.localeCompare(b.id);
 }
 
+// Function to compare orders based on timestamp and sequenceNumber
+function compareOrdersByTimeSeq(a, b) {
+  if (a.timestamp === b.timestamp) {
+    return a.sequenceNumber - b.sequenceNumber;
+  }
+  return new Date(a.timestamp) - new Date(b.timestamp);
+}
+
 const buyOrders = new RBTree(compareBuyOrders);
 const sellOrders = new RBTree(compareSellOrders);
 const ordersById = new RBTree(compareOrdersById);
@@ -120,26 +128,33 @@ function treeToArray(tree) {
 const addOrderSubject$ = new Subject();
 const deleteOrderSubject$ = new Subject();
 
-// Subscription to handle addition of orders
-addOrderSubject$.subscribe(order => {
-    console.log(`Processing order addition: ${order.id}`);
-    addOrder(order); // Assuming addOrder is adapted to work with this setup
-});
-
 // Function to emit order additions
 function emitAddOrder(order) {
     addOrderSubject$.next(order);
 }
 
-// Subscription to handle deletion of orders
-deleteOrderSubject$.subscribe(orderId => {
-  console.log(`Processing order deletion: ${orderId}`);
-  deleteOrder(orderId); // Assuming deleteOrder is a function that handles the deletion logic
-});
-
 // Function to emit deletion requests into the stream
 function emitDeleteOrder(orderId) {
   deleteOrderSubject$.next(orderId);
 }
+
+// Merging the add and delete streams, buffer them, and then sort each batch before processing
+const orderOperationsStream$ = merge(addOrderSubject$, deleteOrderSubject$).pipe(
+  bufferTime(1000), // Collect events over 1 second intervals
+  map(bufferedOrders => bufferedOrders.sort(compareOrdersByTimeSeq)) // Sort buffered orders within each batch
+);
+
+// Process the sorted and buffered orders
+orderOperationsStream$.subscribe(sortedAndBufferedOrders => {
+  sortedAndBufferedOrders.forEach(event => {
+    if (event.type === 'add') {
+      console.log(`Processing addition: ${event.payload.id}`);
+      addOrder(event.payload);
+    } else if (event.type === 'delete') {
+      console.log(`Processing deletion: ${event.payload}`);
+      deleteOrder(event.payload);
+    }
+  });
+});
 
 module.exports = { addOrder, deleteOrder, emitAddOrder, emitDeleteOrder, treeToArray };

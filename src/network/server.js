@@ -1,7 +1,7 @@
 const Link = require('grenache-nodejs-link');
 const { PeerRPCServer } = require('grenache-nodejs-ws');
 const _ = require('lodash');
-const Order = require('../models/order');
+const Order = require('../models/Order'); 
 const { emitAddOrder, emitDeleteOrder } = require('../services/ordermanagement');
 
 const link = new Link({
@@ -20,19 +20,25 @@ setInterval(() => {
 }, 1000);
 
 service.on('request', (rid, key, payload, handler) => {
-    console.log('Received payload:', payload);
-    
-    switch (payload.type) {
-      case 'ADD_ORDER':
-        // Emit the order to the addOrder stream
-        emitAddOrder(new Order(payload.order.id, payload.order.price, payload.order.quantity, payload.order.type));
-        break;
-      case 'DELETE_ORDER':
-        // Emit the orderId to the deleteOrder stream
-        emitDeleteOrder(payload.orderId);
-        break;
-      // Additional cases can be added for other event types
-    }
+  console.log('Received payload:', payload);
   
-    handler.reply(null, 'Order processed');
+  switch (payload.type) {
+    case 'ADD_ORDER':
+      // Assuming payload.order contains all necessary information
+      const newOrder = new Order(
+        payload.order.peerId, 
+        payload.order.price, 
+        payload.order.quantity, 
+        payload.order.type, 
+        payload.order.sequenceNumber
+      );
+      emitAddOrder(newOrder);
+      break;
+    case 'DELETE_ORDER':
+      // For DELETE_ORDER, directly use payload.orderId
+      emitDeleteOrder(payload.orderId);
+      break;
+  }
+
+  handler.reply(null, 'Order processed');
 });

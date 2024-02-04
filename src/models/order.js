@@ -1,11 +1,16 @@
 class Order {
-    constructor(id, price, quantity, type) {
-      this.id = id;
-      this.price = price;
-      this.quantity = quantity;
-      this.type = type; // 'buy' or 'sell'
-    }
+  constructor(peerId, price, quantity, type, sequenceNumber) {
+    this.peerId = peerId;
+    this.price = price;
+    this.quantity = quantity;
+    this.type = type;
+    this.sequenceNumber = sequenceNumber;
+    this.timestamp = new Date().toISOString();
+    this.id = this.generateOrderId();
   }
-  
-  module.exports = Order;
-  
+
+  generateOrderId() {
+    return `order_${this.peerId}_${this.timestamp.replace(/[^0-9]/g, '')}_${this.sequenceNumber}`;
+  }
+}
+module.exports = Order;

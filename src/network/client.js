@@ -1,6 +1,6 @@
 const Link = require('grenache-nodejs-link');
 const { PeerRPCClient } = require('grenache-nodejs-ws');
-const Order = require('../models/order');
+const Order = require('../models/Order');
 const moment = require('moment');
 const crypto = require('crypto');
 
@@ -22,29 +22,22 @@ peer.init();
 * Incorporate this Identifier into the Order ID: Include this unique identifier in the order ID
 * along with the timestamp and a sequence number.
 */ 
-let sequenceNum = 0;
+let sequenceNum = 1;
 
 // Generate a unique hash for this peer instance
 const peerId = crypto.createHash('sha256').update(moment().toISOString() + Math.random().toString()).digest('hex').substr(0, 6); // Short hash of 6 characters
-
-function generateOrderId() {
-  const timestamp = moment().format('YYYYMMDDHHmmssSSS');
-  sequenceNum += 1;
-  return `order_${peerId}_${timestamp}_${sequenceNum}`;
-}
 
 function sendOrder() {
   const actionType = Math.random() > 0.5 ? 'ADD_ORDER' : 'DELETE_ORDER';
   let payload;
 
   if (actionType === 'ADD_ORDER') {
-    const orderId = generateOrderId();
     // Randomly choose between 'buy' and 'sell' order types
     const orderType = Math.random() > 0.5 ? 'buy' : 'sell';
     // Randomly generate order price and quantity
     const orderPrice = 100 + Math.floor(Math.random() * 10);
     const orderQuantity = 1 + Math.floor(Math.random() * 5);
-    const newOrder = new Order(orderId, orderPrice, orderQuantity, orderType);
+    const newOrder = new Order(peerId, orderPrice, orderQuantity, orderType, sequenceNum++);
 
     payload = { type: 'ADD_ORDER', order: newOrder };
   } else {
