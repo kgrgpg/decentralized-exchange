@@ -28,6 +28,8 @@ peerSub.on('disconnected', () => {
 });
 
 // Handle incoming messages
+// Currently orderbooks are only updated by the servers. These messages are for informational purposes only.
+// In a real-world scenario, the client can also have access to complete orderbook and its updates.
 peerSub.on('message', (msg) => {
   console.log('Received Raw message:', msg);
   try {
