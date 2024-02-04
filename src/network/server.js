@@ -21,7 +21,7 @@ const { fromEvent } = require('rxjs');
 const { filter, map } = require('rxjs/operators');
 
 const link = new Link({
-  grape: 'http://192.168.1.18:30001'
+  grape: 'http://192.168.1.29:50001'
 });
 link.start();
 
@@ -49,53 +49,63 @@ setInterval(() => {
 const peerSub = new PeerSub(link, {});
 peerSub.init();
 
-// Subscribe to the desired topic
-peerSub.sub('order_updates', { timeout: 10000 });
+setTimeout(() => {
+  // Subscribe to the desired topic
+try {
+  peerSub.sub('order_updates');
+  // Listen for errors on the PeerSub instance
+  peerSub.on('error', (error) => {
+    console.error('Hello:', error);
+  });
+  peerSub.on('connected', () => {
+    console.log('Subscription connected');
+  });
+  
+  peerSub.on('disconnected', () => {
+    console.log('Subscription disconnected');
+  });
+  
+  // Convert PeerSub messages to an Observable stream
+  const messageStream$ = fromEvent(peerSub, 'message');
+  
+  // Process and act on specific message types
+  messageStream$.pipe(
+    map(msg => JSON.parse(msg)),
+    filter(({ action }) => action === 'order_added' || action === 'order_matched' || action === 'order_updated')
+  ).subscribe({
+    next: ({ action, data }) => {
+      // Handle the action appropriately
+      switch (action) {
+        case 'order_added':
+          // Handle order added event
+          console.log(`New order added:`, data);
+          synchronizeAddOrder(data); // Implement this function based on Step 2
+          break;
+        case 'order_matched':
+          // Handle order matched event
+          console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
+          // Function for matching is not needed as it does not alter the order books in itself. Other three actions do.
+          break;
+        case 'order_updated':
+          // Handle order updated event
+          console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
+          synchronizeUpdateOrder(data); // Implement update synchronization
+          break;
+        case 'order_removed':
+          // Handle order removed event
+          console.log(`Order ${data.orderId} removed.`);
+          synchronizeRemoveOrder(data); // Implement removal synchronization
+          break;
+      }
+    },
+    error: err => console.error('Error processing message:', err),
+    complete: () => console.log('Message stream completed')
+  });
+} catch (error) {
+  console.error('Error subscribing to order_updates:', error);
+}
 
-peerSub.on('connected', () => {
-  console.log('Subscription connected');
-});
-
-peerSub.on('disconnected', () => {
-  console.log('Subscription disconnected');
-});
-
-// Convert PeerSub messages to an Observable stream
-const messageStream$ = fromEvent(peerSub, 'message');
-
-// Process and act on specific message types
-messageStream$.pipe(
-  map(msg => JSON.parse(msg)),
-  filter(({ action }) => action === 'order_added' || action === 'order_matched' || action === 'order_updated')
-).subscribe({
-  next: ({ action, data }) => {
-    // Handle the action appropriately
-    switch (action) {
-      case 'order_added':
-        // Handle order added event
-        console.log(`New order added:`, data);
-        synchronizeAddOrder(data); // Implement this function based on Step 2
-        break;
-      case 'order_matched':
-        // Handle order matched event
-        console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
-        // Function for matching is not needed as it does not alter the order books in itself. Other three actions do.
-        break;
-      case 'order_updated':
-        // Handle order updated event
-        console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
-        synchronizeUpdateOrder(data); // Implement update synchronization
-        break;
-      case 'order_removed':
-        // Handle order removed event
-        console.log(`Order ${data.orderId} removed.`);
-        synchronizeRemoveOrder(data); // Implement removal synchronization
-        break;
-    }
-  },
-  error: err => console.error('Error processing message:', err),
-  complete: () => console.log('Message stream completed')
-});
+}, 60000);
 
 serviceRPC.on('request', (rid, key, payload, handler) => {
   console.log('Received payload:', payload);
