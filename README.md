@@ -14,10 +14,9 @@ This project demonstrates a simplified model of a distributed exchange system bu
 
 1. **Client.js**: A client script that submits orders and listens for updates.
 2. **Server.js**: A server script that processes orders, matches them, and broadcasts updates.
-3. **SecondaryServer.js**: This script serves as a temporary measure to simulate an additional server in the network, facilitating server-to-server communication and order synchronization. It was specifically designed to be plugged into an already running network consisting of a primary server and multiple clients, without the need to halt or restart the existing setup. The goal was to test and demonstrate the dynamic scalability of the system - allowing new server nodes to join and synchronize with the network seamlessly. The code within SecondaryServer.js mirrors the primary server's functionalities, including processing orders, matching them, and broadcasting updates. However, it also subscribes to updates from other servers to maintain a synchronized state across the network. This approach ensures that all nodes, both servers, and clients, have a consistent view of the order book, thereby enhancing the reliability and robustness of the distributed exchange system. Once the server-to-server communication and synchronization are thoroughly tested and validated, the intention is to merge the functionalities of SecondaryServer.js back into server.js, consolidating the codebase for simplicity and maintainability.
-4. **Order.js**: This script defines a simple yet effective model for orders within our distributed exchange system. Each order is characterized by essential attributes such as peerId, price, quantity, type (buy or sell), and sequenceNumber, providing a comprehensive framework for order representation.
+3. **Order.js**: This script defines a simple yet effective model for orders within our distributed exchange system. Each order is characterized by essential attributes such as peerId, price, quantity, type (buy or sell), and sequenceNumber, providing a comprehensive framework for order representation.
     * UUID Generation: A unique identifier (UUID) for each order is crucial for distinguishing and tracking orders throughout their lifecycle in the distributed system. In our implementation, the UUID is generated using a combination of the peerId, a timestamp (to ensure time-based uniqueness), and the sequenceNumber (to preserve the order of operations). This method ensures that each order can be uniquely identified across the network, mitigating the risk of collisions and enabling precise order matching and management. The format order_{peerId}_{timestamp}_{sequenceNumber} leverages both temporal and operational elements, offering a robust mechanism for order identification. This UUID approach facilitates the tracking, updating, and deletion of orders in a performant and reliable manner, supporting the system's overall efficiency and integrity.
-6. **OrderManagement.js**: Contains the logic for managing and matching orders using red-black trees for efficient order book management.
+4. **OrderManagement.js**: Contains the logic for managing and matching orders using red-black trees for efficient order book management.
 
 ### Technologies Used
 
@@ -74,7 +73,7 @@ By leveraging Red-Black Trees, we enhance the performance and reliability of our
 ### Running the Project
 
 1. **Setup Grenache Grape**: Ensure you have at least two instances of Grenache Grape running and interconnected.
-2. **Start Server(s)**: Run `node server.js` 
+2. **Start Server(s)**: Run `node server.js` . Make sure to start another server within 60 seconds because the first server is expecting a sub topic.
 3. **Run Client(s)**: Execute `node client.js` to start a client instance. Multiple clients can be started to simulate real-world usage.
 
 ### Conclusion
