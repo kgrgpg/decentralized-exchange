@@ -1,8 +1,14 @@
 const Link = require('grenache-nodejs-link');
-const { PeerRPCServer } = require('grenache-nodejs-ws');
+const { PeerRPCServer, PeerPub, PeerSub } = require('grenache-nodejs-ws');
 const _ = require('lodash');
 const Order = require('../models/Order'); 
-const { emitAddOrder, emitDeleteOrder } = require('../services/ordermanagement');
+const { 
+  emitAddOrder, 
+  emitDeleteOrder, 
+  orderMatchedSubject$, 
+  orderUpdatedSubject$, 
+  orderAddedSubject$ 
+} = require('../services/ordermanagement');
 
 const link = new Link({
   grape: 'http://127.0.0.1:30001'
@@ -18,6 +24,14 @@ service.listen(_.random(1000) + 1024);
 setInterval(() => {
   link.announce('rpc_test', service.port, {});
 }, 1000);
+
+// Initialize PeerPub for broadcasting messages
+const peerPub = new PeerPub(link, {});
+peerPub.init();
+
+// Initialize PeerSub for subscribing to messages
+const peerSub = new PeerSub(link, {});
+peerSub.init();
 
 service.on('request', (rid, key, payload, handler) => {
   console.log('Received payload:', payload);
@@ -43,4 +57,31 @@ service.on('request', (rid, key, payload, handler) => {
   }
 
   handler.reply(null, 'Order processed');
+});
+
+['order_matched', 'order_updated', 'order_added'].forEach(topic => {
+  peerSub.sub(topic);
+});
+
+peerSub.on('message', (msg) => {
+  console.log('Received message:', msg);
+  // Deserialize and process the message to update local order book
+});
+
+// Function to broadcast messages using PeerPub
+function broadcastMessage(topic, message) {
+  peerPub.pub(topic, JSON.stringify(message));
+}
+
+// Subscribe to order events and broadcast them using the new broadcast function
+orderMatchedSubject$.subscribe(matchInfo => {
+  broadcastMessage('order_matched', matchInfo);
+});
+
+orderUpdatedSubject$.subscribe(updateInfo => {
+  broadcastMessage('order_updated', updateInfo);
+});
+
+orderAddedSubject$.subscribe(addedInfo => {
+  broadcastMessage('order_added', addedInfo);
 });

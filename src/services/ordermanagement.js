@@ -127,18 +127,46 @@ function matchAndExecuteOrder(newOrder) {
 
       if (newOrder.quantity <= currentBestMatch.quantity) {
         console.log(`Full or partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+        
+        // Calculate executed quantity before updating the currentBestMatch quantity
+        const executedQuantity = newOrder.quantity;
+        
         currentBestMatch.quantity -= newOrder.quantity;
         if (currentBestMatch.quantity === 0) {
           oppositeBook.remove(currentBestMatch);
           ordersById.remove(currentBestMatch.id);
+        } else {
+          // Emit the updated event for partial matches where the best match still has remaining quantity
+          emitOrderUpdated({
+            orderId: currentBestMatch.id,
+            newQuantity: currentBestMatch.quantity
+          });
         }
         newOrder.quantity = 0;
+
+        // Emit the matched event
+        emitOrderMatched({
+          orderId: newOrder.id,
+          matchedWith: currentBestMatch.id,
+          executedQuantity: executedQuantity
+        });
+
         break; // Order fully matched
       } else {
         console.log(`Partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+        // Calculate executed quantity for the partial match
+        const executedQuantity = currentBestMatch.quantity;
+
         newOrder.quantity -= currentBestMatch.quantity;
         oppositeBook.remove(currentBestMatch);
         ordersById.remove(currentBestMatch.id);
+
+        // Emit the matched event for partial matches
+        emitOrderMatched({
+          orderId: newOrder.id,
+          matchedWith: currentBestMatch.id,
+          executedQuantity: executedQuantity
+        });
       }
 
       // Move to next best match
@@ -148,6 +176,19 @@ function matchAndExecuteOrder(newOrder) {
     if (newOrder.quantity > 0) {
       console.log(`No (further) match found for order ${newOrder.id}, adding to book.`);
       addOrderToBooks(newOrder);
+
+      // Emit the ORDER_ADDED event
+      emitOrderAdded({
+        orderId: newOrder.id,
+        orderDetails: {
+          peerId: newOrder.peerId,
+          price: newOrder.price,
+          quantity: newOrder.quantity,
+          type: newOrder.type,
+          sequenceNumber: newOrder.sequenceNumber,
+          timestamp: newOrder.timestamp
+        }
+      });
     }
   }
   catch (error) {
@@ -189,6 +230,23 @@ function treeToArray(tree) {
   tree.each(node => result.push(node));
   return result;
 }
+
+const orderMatchedSubject$ = new Subject();
+const orderUpdatedSubject$ = new Subject();
+const orderAddedSubject$ = new Subject();
+
+function emitOrderMatched(matchInfo) {
+  orderMatchedSubject$.next(matchInfo);
+}
+
+function emitOrderUpdated(updateInfo) {
+  orderUpdatedSubject$.next(updateInfo);
+}
+
+function emitOrderAdded(orderDetails) {
+  orderAddedSubject$.next(orderDetails);
+}
+
 
 // Define subjects
 const addOrderSubject$ = new Subject();
