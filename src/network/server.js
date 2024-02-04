@@ -2,8 +2,7 @@ const Link = require('grenache-nodejs-link');
 const { PeerRPCServer } = require('grenache-nodejs-ws');
 const _ = require('lodash');
 const Order = require('../models/order');
-const { addOrder, deleteOrder } = require('../services/ordermanagement');
-
+const { emitAddOrder, emitDeleteOrder } = require('../services/ordermanagement');
 
 const link = new Link({
   grape: 'http://127.0.0.1:30001'
@@ -25,14 +24,15 @@ service.on('request', (rid, key, payload, handler) => {
     
     switch (payload.type) {
       case 'ADD_ORDER':
-        addOrder(new Order(payload.order.id, payload.order.price, payload.order.quantity, payload.order.type));
+        // Emit the order to the addOrder stream
+        emitAddOrder(new Order(payload.order.id, payload.order.price, payload.order.quantity, payload.order.type));
         break;
       case 'DELETE_ORDER':
-        deleteOrder(payload.orderId);
+        // Emit the orderId to the deleteOrder stream
+        emitDeleteOrder(payload.orderId);
         break;
       // Additional cases can be added for other event types
     }
   
     handler.reply(null, 'Order processed');
-  });
-  
+});
