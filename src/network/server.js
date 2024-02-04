@@ -2,7 +2,7 @@ const Link = require('grenache-nodejs-link');
 const { PeerRPCServer } = require('grenache-nodejs-ws');
 const _ = require('lodash');
 const Order = require('../models/order');
-const { addOrder, deleteOrder } = require('../services/orderManagement');
+const { addOrder, deleteOrder } = require('../services/ordermanagement');
 
 
 const link = new Link({
