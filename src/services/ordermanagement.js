@@ -81,21 +81,27 @@ const ordersById = new RBTree(compareOrdersById);
  * @param {Order} order - The order to be added
  */
 function addOrderToBooks(order) {
-  if (order.type === 'buy') {
-    buyOrders.insert(order);
-  } else {
-    sellOrders.insert(order);
+  try {
+    const book = order.type === 'buy' ? buyOrders : sellOrders;
+    book.insert(order);
+    ordersById.insert(order);
+    console.log(`Order added to book: ${order.id}`);
+  } catch (error) {
+    console.error('Failed to add order to book', error);
   }
-  ordersById.insert(order);
 }
 
-function deleteOrderFromBooks(order) {
-  if (order.type === 'buy') {
-    buyOrders.remove(order);
-  } else {
-    sellOrders.remove(order);
+function deleteOrderFromBooks(orderId) {
+  try {
+    const order = ordersById.find({ id: orderId });
+    if (!order) throw new Error('Order not found');
+    const book = order.type === 'buy' ? buyOrders : sellOrders;
+    book.remove(order);
+    ordersById.remove(order);
+    console.log(`Order deleted from book: ${orderId}`);
+  } catch (error) {
+    console.error('Failed to delete order from book', error);
   }
-  ordersById.remove(order);
 }
 
 /**
@@ -107,39 +113,45 @@ function deleteOrderFromBooks(order) {
  * @param {Order} newOrder - The order to be matched and executed
  */
 function matchAndExecuteOrder(newOrder) {
-  const oppositeBook = newOrder.type === 'buy' ? sellOrders : buyOrders;
-  let currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
+  try{
+    
+    const oppositeBook = newOrder.type === 'buy' ? sellOrders : buyOrders;
+    let currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
 
-  while (currentBestMatch) {
-    // Determine if current best match is valid based on order type and price
-    const isValidMatch = newOrder.type === 'buy' ? newOrder.price >= currentBestMatch.price 
-                                                  : newOrder.price <= currentBestMatch.price;
+    while (currentBestMatch) {
+      // Determine if current best match is valid based on order type and price
+      const isValidMatch = newOrder.type === 'buy' ? newOrder.price >= currentBestMatch.price 
+                                                    : newOrder.price <= currentBestMatch.price;
 
-    if (!isValidMatch) break;
+      if (!isValidMatch) break;
 
-    if (newOrder.quantity <= currentBestMatch.quantity) {
-      console.log(`Full or partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
-      currentBestMatch.quantity -= newOrder.quantity;
-      if (currentBestMatch.quantity === 0) {
+      if (newOrder.quantity <= currentBestMatch.quantity) {
+        console.log(`Full or partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+        currentBestMatch.quantity -= newOrder.quantity;
+        if (currentBestMatch.quantity === 0) {
+          oppositeBook.remove(currentBestMatch);
+          ordersById.remove(currentBestMatch.id);
+        }
+        newOrder.quantity = 0;
+        break; // Order fully matched
+      } else {
+        console.log(`Partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+        newOrder.quantity -= currentBestMatch.quantity;
         oppositeBook.remove(currentBestMatch);
         ordersById.remove(currentBestMatch.id);
       }
-      newOrder.quantity = 0;
-      break; // Order fully matched
-    } else {
-      console.log(`Partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
-      newOrder.quantity -= currentBestMatch.quantity;
-      oppositeBook.remove(currentBestMatch);
-      ordersById.remove(currentBestMatch.id);
+
+      // Move to next best match
+      currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
     }
 
-    // Move to next best match
-    currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
+    if (newOrder.quantity > 0) {
+      console.log(`No (further) match found for order ${newOrder.id}, adding to book.`);
+      addOrderToBooks(newOrder);
+    }
   }
-
-  if (newOrder.quantity > 0) {
-    console.log(`No (further) match found for order ${newOrder.id}, adding to book.`);
-    addOrderToBooks(newOrder);
+  catch (error) {
+    console.error('Error matching and executing order', error);
   }
 }
 
