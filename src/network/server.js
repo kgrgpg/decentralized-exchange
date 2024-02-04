@@ -61,20 +61,22 @@ serviceRPC.on('request', (rid, key, payload, handler) => {
   handler.reply(null, 'Order processed');
 });
 
-const broadcastMessage = (topic, message) => {
-  // Using the correct method for publishing messages based on the Grenache example
-  servicePub.pub(topic, JSON.stringify(message));
+const broadcastMessage = (message) => {
+  // Directly use the message object which includes both action and data
+  servicePub.pub(message.action, JSON.stringify(message));
 };
 
-// Subscriptions to internal order events for broadcasting
+// Subscribing to order matched events and broadcasting them
 orderMatchedSubject$.subscribe(matchInfo => {
-  broadcastMessage('order_matched', matchInfo);
+  broadcastMessage(matchInfo); // matchInfo already includes action and data
 });
 
+// Subscribing to order updated events and broadcasting them
 orderUpdatedSubject$.subscribe(updateInfo => {
-  broadcastMessage('order_updated', updateInfo);
+  broadcastMessage(updateInfo); // updateInfo already includes action and data
 });
 
+// Subscribing to order added events and broadcasting them
 orderAddedSubject$.subscribe(addedInfo => {
-  broadcastMessage('order_added', addedInfo);
+  broadcastMessage(addedInfo); // addedInfo already includes action and data
 });
