@@ -5,59 +5,75 @@ const { PeerRPCClient, PeerSub } = require('grenache-nodejs-ws');
 const Order = require('../models/Order');
 const moment = require('moment');
 const crypto = require('crypto');
+const { set } = require('lodash');
 
 // Initialize Grenache Link and PeerRPCClient
-const link = new Link({ grape: 'http://192.168.1.29:40001' });
+const link = new Link({ grape: 'http://127.0.0.1:60001' });
 link.start();
 const peer = new PeerRPCClient(link, {});
 peer.init();
 
-// Initialize PeerSub for listening to broadcasts
-const peerSub = new PeerSub(link, {});
-peerSub.init();
-
-// Subscribe to the desired topic
-peerSub.sub('order_updates', { timeout: 10000 });
-
-peerSub.on('connected', () => {
-  console.log('Subscription connected');
-});
-
-peerSub.on('disconnected', () => {
-  console.log('Subscription disconnected');
-});
-
-// Handle incoming messages
-// Currently orderbooks are only updated by the servers. These messages are for informational purposes only.
-// In a real-world scenario, the client can also have access to complete orderbook and its updates.
-peerSub.on('message', (msg) => {
-  console.log('Received Raw message:', msg);
+setTimeout(() => {
   try {
-    const parsedMsg = JSON.parse(msg);
-    const { action, data } = parsedMsg;
+    // Check if service is available before subscribing
+    link.lookup('order_updates', (err, res) => {
+      if (err) {
+        console.log('Error looking up order_updates:', err);
+        console.log('Make sure another server is running before the timeout for peerSub expires.');
+        return;
+      }
+      console.log('Lookup result:', res);
+    });
+      // Initialize PeerSub for listening to broadcasts
+    const peerSub = new PeerSub(link, {});
+    peerSub.init();
 
-    console.log(`Received ${action} message:`, data);
+    // Subscribe to the desired topic
+    peerSub.sub('order_updates', { timeout: 10000 });
 
-    switch (action) {
-      case 'order_matched':
-        // Handle order matched event
-        console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
-        break;
-      case 'order_updated':
-        // Handle order updated event
-        console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
-        break;
-      case 'order_added':
-        // Handle order added event
-        console.log(`New order added:`, data);
-        break;
-      default:
-        console.warn(`Unknown action type received: ${action}`);
-    }
+    peerSub.on('connected', () => {
+      console.log('Subscription connected');
+    });
+
+    peerSub.on('disconnected', () => {
+      console.log('Subscription disconnected');
+    });
+
+    // Handle incoming messages
+    // Currently orderbooks are only updated by the servers. These messages are for informational purposes only.
+    // In a real-world scenario, the client can also have access to complete orderbook and its updates.
+    peerSub.on('message', (msg) => {
+      console.log('Received Raw message:', msg);
+      try {
+        const parsedMsg = JSON.parse(msg);
+        const { action, data } = parsedMsg;
+
+        console.log(`Received ${action} message:`, data);
+
+        switch (action) {
+          case 'order_matched':
+            // Handle order matched event
+            console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
+            break;
+          case 'order_updated':
+            // Handle order updated event
+            console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
+            break;
+          case 'order_added':
+            // Handle order added event
+            console.log(`New order added:`, data);
+            break;
+          default:
+            console.warn(`Unknown action type received: ${action}`);
+        }
+      } catch (error) {
+        console.error('Error processing message:', error);
+      }
+    });
   } catch (error) {
-    console.error('Error processing message:', error);
+    console.error('Error subscribing to order_updates:', error);
   }
-});
+}, 6000);
 
 // Generate a unique identifier for the peer
 const peerId = crypto.createHash('sha256').update(`${moment().toISOString()}${Math.random()}`).digest('hex').substr(0, 6);
@@ -113,5 +129,3 @@ orderRequestInterval$.subscribe({
   error: err => console.error('Observable encountered an error:', err),
   complete: () => console.log('Observable completed')
 });
-
-
