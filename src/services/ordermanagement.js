@@ -1,5 +1,6 @@
 // Red-black tree implementation of order book
 const RBTree = require('bintrees').RBTree;
+const { update } = require('lodash');
 // Import necessary functions and operators from RxJS
 const { Subject, merge } = require('rxjs');
 const { bufferTime, map } = require('rxjs/operators');
@@ -104,6 +105,33 @@ function deleteOrderFromBooks(orderId) {
   }
 }
 
+function updateOrderInBooks(updateInfo) {
+  try{
+    // Attempt to find the order by ID
+    const order = ordersById.find({ id: updateInfo.orderId });
+    if (!order) {
+      console.error(`Order not found: ${updateInfo.orderId}`);
+      return;
+    }
+
+    // Update order details
+    order.quantity = updateInfo.newQuantity;
+    // Optionally, update other details if necessary
+
+    // Since the order's price or quantity might have changed,
+    // it might be necessary to remove and re-insert the order to maintain the correct order in the tree
+    const book = order.type === 'buy' ? buyOrders : sellOrders;
+    book.remove(order);
+    book.insert(order);
+
+    console.log(`Order updated in book: ${order.id}`);
+  }
+  catch (error) {
+    console.error('Error updating order in books', error);
+  }
+}
+
+
 /**
  * matchAndExecuteOrder
  * 
@@ -140,7 +168,8 @@ function matchAndExecuteOrder(newOrder) {
           emitOrderRemoved({
             orderId: currentBestMatch.id,
             matchedWith: newOrder.id, // Including this for context might be helpful
-            executedQuantity: executedQuantity // This might not be necessary but could be useful for logging/auditing
+            executedQuantity: executedQuantity, // This might not be necessary but could be useful for logging/auditing
+            removalTimestamp: new Date().toISOString()
           });
         } else {
           // Emit the updated event for partial matches where the best match still has remaining quantity
@@ -331,7 +360,10 @@ function synchronizeRemoveOrder(order) {
 // Merging the add and delete streams, buffer them, and then sort each batch before processing
 const orderOperationsStream$ = merge(
   addOrderSubject$.pipe(map(order => ({ operationType: 'add', payload: order }))), // Mark each order addition with a type
-  deleteOrderSubject$.pipe(map(deletionInfo => ({ operationType: 'delete', payload: deletionInfo }))) // Mark each deletion with a type
+  deleteOrderSubject$.pipe(map(deletionInfo => ({ operationType: 'delete', payload: deletionInfo }))), // Mark each deletion with a type
+  syncOrderAddedSubject$.pipe(map(orderInfo => ({ operationType: 'syncAdd', payload: orderInfo }))), // Mark each sync order addition with a type
+  syncOrderUpdatedSubject$.pipe(map(updateInfo => ({ operationType: 'syncUpdate', payload: updateInfo }))), // Mark each sync order update with a type
+  syncOrderRemovedSubject$.pipe(map(removalInfo => ({ operationType: 'syncRemove', payload: removalInfo }))) // Mark each sync order removal with a type
 ).pipe(
   bufferTime(1000),
   map(bufferedOperations => bufferedOperations.sort((a, b) => compareOrdersByTimeSeq(a.payload, b.payload))) // Ensure the sorting logic correctly references the timestamp within the payload.
@@ -368,6 +400,24 @@ function processOperation(operation) {
       case 'delete':
         deleteOrder(payload.orderId, payload.timestamp);
         break;
+      case 'syncAdd':
+        const newOrder = new Order(
+          payload.peerId,
+          payload.price,
+          payload.quantity,
+          payload.type,
+          payload.sequenceNumber
+        );
+        newOrder.timestamp = payload.timestamp; // Ensure the timestamp from client is preserved
+        newOrder.id = payload.orderId;
+        addOrderToBooks(newOrder);
+        break; 
+      case 'syncUpdate':
+        updateOrderInBooks(payload);
+        break;
+      case 'syncRemove':
+        deleteOrder(payload.orderId, payload.removalTimestamp);
+        break;
       default:
         console.warn(`Unknown operation type: ${operationType}`);
     }
@@ -377,4 +427,4 @@ function processOperation(operation) {
 }
 
 
-module.exports = { emitAddOrder, emitDeleteOrder, treeToArray, orderMatchedSubject$, orderUpdatedSubject$, orderAddedSubject$};
+module.exports = { emitAddOrder, emitDeleteOrder, treeToArray, orderMatchedSubject$, orderUpdatedSubject$, orderAddedSubject$, synchronizeAddOrder, synchronizeUpdateOrder, synchronizeRemoveOrder};
