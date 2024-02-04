@@ -32,11 +32,13 @@ service.on('request', (rid, key, payload, handler) => {
         payload.order.type, 
         payload.order.sequenceNumber
       );
+      newOrder.timestamp = payload.order.timestamp; // Ensure the timestamp from client is preserved
       emitAddOrder(newOrder);
       break;
     case 'DELETE_ORDER':
       // For DELETE_ORDER, directly use payload.orderId
-      emitDeleteOrder(payload.orderId);
+      // Include the deletion timestamp in the deletion event
+      emitDeleteOrder({ orderId: payload.orderId, timestamp: payload.timestamp });
       break;
   }
 

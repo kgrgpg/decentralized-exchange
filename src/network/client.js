@@ -41,9 +41,10 @@ function sendOrder() {
 
     payload = { type: 'ADD_ORDER', order: newOrder };
   } else {
-    // For DELETE_ORDER, you need to provide valid order IDs. This part depends on how you track or store orders.
+    // For DELETE_ORDER, you need to provide valid order IDs. This part depends on how you track or store orders in client.
+    const deletionTimestamp = new Date().toISOString(); // Capture the current timestamp for the deletion request
     const orderIdToDelete = 'someValidOrderId'; // Replace with actual logic to determine which order to delete
-    payload = { type: 'DELETE_ORDER', orderId: orderIdToDelete };
+    payload = { type: 'DELETE_ORDER', orderId: orderIdToDelete, timestamp: deletionTimestamp};
   }
 
   peer.request('rpc_test', payload, { timeout: 10000 }, (err, data) => {

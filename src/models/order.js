@@ -3,7 +3,7 @@ class Order {
     this.peerId = peerId;
     this.price = price;
     this.quantity = quantity;
-    this.type = type;
+    this.type = type; //Buy or Sell
     this.sequenceNumber = sequenceNumber;
     this.timestamp = new Date().toISOString();
     this.id = this.generateOrderId();

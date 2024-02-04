@@ -141,20 +141,27 @@ function emitDeleteOrder(orderId) {
 }
 
 // Merging the add and delete streams, buffer them, and then sort each batch before processing
-const orderOperationsStream$ = merge(addOrderSubject$, deleteOrderSubject$).pipe(
-  bufferTime(1000), // Collect events over 1 second intervals
-  map(bufferedOrders => bufferedOrders.sort(compareOrdersByTimeSeq)) // Sort buffered orders within each batch
+const orderOperationsStream$ = merge(
+  addOrderSubject$.pipe(map(order => ({...order, type: 'add'}))), // Mark each order addition with a type
+  deleteOrderSubject$.pipe(map(deletion => ({...deletion, type: 'delete'}))) // Mark each deletion with a type
+).pipe(
+  bufferTime(1000),
+  map(bufferedOperations => bufferedOperations.sort(compareOrdersByTimeSeq)) // Sort operations by timestamp and sequenceNumber
 );
 
 // Process the sorted and buffered orders
-orderOperationsStream$.subscribe(sortedAndBufferedOrders => {
-  sortedAndBufferedOrders.forEach(event => {
-    if (event.type === 'add') {
-      console.log(`Processing addition: ${event.payload.id}`);
-      addOrder(event.payload);
-    } else if (event.type === 'delete') {
-      console.log(`Processing deletion: ${event.payload}`);
-      deleteOrder(event.payload);
+orderOperationsStream$.subscribe(sortedOperations => {
+  sortedOperations.forEach(operation => {
+    if (operation.type === 'add') {
+      console.log(`Processing addition: ${operation.payload.id}`);
+      addOrderToBook(operation.payload);
+    } else if (operation.type === 'delete') {
+      console.log(`Processing deletion: ${operation.payload.orderId}`);
+      // Find the order by ID and check timestamp before deletion
+      const orderToDelete = ordersById.find({id: operation.payload.orderId});
+      if (orderToDelete && orderToDelete.timestamp <= operation.payload.timestamp) {
+        deleteOrderFromBook(operation.payload.orderId);
+      }
     }
   });
 });
