@@ -43,6 +43,8 @@ function addOrder(order) {
     return result;
   }
   
+  // Export the functions
+  module.exports = { addOrder, deleteOrder};
   
   // Example usage
   addOrder(new Order('1', 100, 10, 'buy'));

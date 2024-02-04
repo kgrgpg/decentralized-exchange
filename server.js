@@ -1,6 +1,9 @@
 const Link = require('grenache-nodejs-link');
 const { PeerRPCServer } = require('grenache-nodejs-ws');
 const _ = require('lodash');
+const Order = require('./order');
+const { addOrder, deleteOrder } = require('./index');
+
 
 const link = new Link({
   grape: 'http://127.0.0.1:30001'
@@ -18,6 +21,18 @@ setInterval(() => {
 }, 1000);
 
 service.on('request', (rid, key, payload, handler) => {
-  console.log('Received payload:', payload);
-  handler.reply(null, 'response from server');
-});
+    console.log('Received payload:', payload);
+    
+    switch (payload.type) {
+      case 'ADD_ORDER':
+        addOrder(new Order(payload.order.id, payload.order.price, payload.order.quantity, payload.order.type));
+        break;
+      case 'DELETE_ORDER':
+        deleteOrder(payload.orderId);
+        break;
+      // Additional cases can be added for other event types
+    }
+  
+    handler.reply(null, 'Order processed');
+  });
+  
