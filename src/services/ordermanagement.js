@@ -6,35 +6,62 @@ const { bufferTime, map } = require('rxjs/operators');
 
 // Sort buy orders by descending price, then ascending order ID
 function compareBuyOrders(a, b) {
-  if (!a || !b || !a.id || !b.id) {
-    console.error('Invalid comparison attempt between', a, 'and', b);
+  try {
+    if (!a || !b || !a.id || !b.id) {
+      console.error('Invalid comparison attempt between', a, 'and', b);
+      return 0;
+    }
+    if (b.price !== a.price) return b.price - a.price;
+    return a.id.localeCompare(b.id);
+  }
+  catch (error) {
+    console.error('Error comparing buy orders', error);
     return 0;
   }
-  if (b.price !== a.price) return b.price - a.price;
-  return a.id.localeCompare(b.id);
 }
 
 // Sort sell orders by ascending price, then ascending order ID
 function compareSellOrders(a, b) {
-  if (!a || !b || !a.id || !b.id) {
-    console.error('Invalid comparison attempt between', a, 'and', b);
+  try {
+    if (!a || !b || !a.id || !b.id) {
+      console.error('Invalid comparison attempt between', a, 'and', b);
+      return 0;
+    }
+    if (a.price !== b.price) return a.price - b.price;
+    return a.id.localeCompare(b.id);
+  }
+  catch (error) {
+    console.error('Error comparing sell orders', error);
     return 0;
   }
-  if (a.price !== b.price) return a.price - b.price;
-  return a.id.localeCompare(b.id);
 }
 
 // Sort orders by ascending order ID
 function compareOrdersById(a, b) {
-  return a.id.localeCompare(b.id);
+  try {
+    if (!a || !b || !a.id || !b.id) {
+      console.error('Invalid comparison attempt between', a, 'and', b);
+      return 0;
+    }
+    return a.id.localeCompare(b.id);
+  }
+  catch (error) {
+    console.error('Error comparing orders by ID', error);
+    return 0;
+  }
 }
 
 // Function to compare orders based on timestamp and sequenceNumber
 function compareOrdersByTimeSeq(a, b) {
-  if (a.timestamp === b.timestamp) {
-    return a.sequenceNumber - b.sequenceNumber;
+  try {
+    if (a.timestamp === b.timestamp && a.sequenceNumber === b.sequenceNumber) {
+      return 0;
+    }
+    if (a.timestamp === b.timestamp) {
+      return a.sequenceNumber - b.sequenceNumber;
+    }
+    return new Date(a.timestamp) - new Date(b.timestamp);
   }
-  return new Date(a.timestamp) - new Date(b.timestamp);
 }
 
 const buyOrders = new RBTree(compareBuyOrders);
@@ -173,7 +200,14 @@ const orderOperationsStream$ = merge(
 // Process the sorted and buffered orders
 orderOperationsStream$.subscribe({
   next: sortedOperations => {
-    sortedOperations.forEach(processOperation);
+    sortedOperations.forEach(operation=>{
+      try {
+        processOperation(operation);
+      }
+      catch (error) {
+        console.error('Error processing operation', operation, error);
+      }
+    });
   },
   error: err => {
     console.error('Error processing operations stream', err);
@@ -182,16 +216,25 @@ orderOperationsStream$.subscribe({
 
 function processOperation(operation) {
   try {
-    if (operation.operationType === 'add') {
-      console.log(`Processing addition: ${operation.payload.id}`);
-      addOrderAfterMatching(operation.payload);
-    } else if (operation.operationType === 'delete') {
-      console.log(`Processing deletion: ${operation.payload.orderId} at ${operation.payload.timestamp}`);
-      deleteOrder(operation.payload.orderId, operation.payload.timestamp);
+    if (!operation || !operation.payload) throw new Error("Invalid operation payload");
+
+    const { operationType, payload } = operation;
+    console.log(`Processing ${operationType}:`, payload);
+
+    switch (operationType) {
+      case 'add':
+        addOrderAfterMatching(payload);
+        break;
+      case 'delete':
+        deleteOrder(payload.orderId, payload.timestamp);
+        break;
+      default:
+        console.warn(`Unknown operation type: ${operationType}`);
     }
   } catch (error) {
-    console.error(`Error processing ${operation.operationType} operation for order ID: ${operation.payload.id || operation.payload.orderId}`, error);
+    console.error(`Error processing operation: ${error.message}`, operation);
   }
 }
+
 
 module.exports = { addOrder: addOrderAfterMatching, deleteOrder, emitAddOrder, emitDeleteOrder, treeToArray };
