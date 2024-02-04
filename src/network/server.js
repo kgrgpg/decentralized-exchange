@@ -15,25 +15,27 @@ const link = new Link({
 });
 link.start();
 
-const peer = new PeerRPCServer(link, {});
-peer.init();
+const peerRPC = new PeerRPCServer(link, {});
+peerRPC.init();
 
-const service = peer.transport('server');
-service.listen(_.random(1000) + 1024);
+const serviceRPC = peerRPC.transport('server');
+serviceRPC.listen(_.random(1000) + 1024);
 
 setInterval(() => {
-  link.announce('rpc_test', service.port, {});
+  link.announce('order_service', serviceRPC.port, {});
 }, 1000);
 
-// Initialize PeerPub for broadcasting messages
 const peerPub = new PeerPub(link, {});
 peerPub.init();
 
-// Initialize PeerSub for subscribing to messages
-const peerSub = new PeerSub(link, {});
-peerSub.init();
+const servicePub = peerPub.transport('server');
+servicePub.listen(_.random(1000) + 2000); // Listen on a different port for publishing
 
-service.on('request', (rid, key, payload, handler) => {
+setInterval(() => {
+  link.announce('order_updates', servicePub.port, {});
+}, 1000);
+
+serviceRPC.on('request', (rid, key, payload, handler) => {
   console.log('Received payload:', payload);
   
   switch (payload.type) {
@@ -59,21 +61,12 @@ service.on('request', (rid, key, payload, handler) => {
   handler.reply(null, 'Order processed');
 });
 
-['order_matched', 'order_updated', 'order_added'].forEach(topic => {
-  peerSub.sub(topic);
-});
+const broadcastMessage = (topic, message) => {
+  // Using the correct method for publishing messages based on the Grenache example
+  servicePub.pub(topic, JSON.stringify(message));
+};
 
-peerSub.on('message', (msg) => {
-  console.log('Received message:', msg);
-  // Deserialize and process the message to update local order book
-});
-
-// Function to broadcast messages using PeerPub
-function broadcastMessage(topic, message) {
-  peerPub.pub(topic, JSON.stringify(message));
-}
-
-// Subscribe to order events and broadcast them using the new broadcast function
+// Subscriptions to internal order events for broadcasting
 orderMatchedSubject$.subscribe(matchInfo => {
   broadcastMessage('order_matched', matchInfo);
 });
