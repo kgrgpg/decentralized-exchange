@@ -4,12 +4,13 @@ class Order {
     this.price = price;
     this.quantity = quantity;
     this.type = type; //Buy or Sell
-    this.sequenceNumber = sequenceNumber;
-    this.timestamp = new Date().toISOString();
+    this.sequenceNumber = sequenceNumber; // Sequence number for ordering
+    this.timestamp = new Date().toISOString(); // Timestamp for order creation
     this.id = this.generateOrderId();
   }
 
   generateOrderId() {
+    // Generates a unique ID for the order using peerId, timestamp, and sequenceNumber
     return `order_${this.peerId}_${this.timestamp.replace(/[^0-9]/g, '')}_${this.sequenceNumber}`;
   }
 }
