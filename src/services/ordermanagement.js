@@ -1,6 +1,8 @@
 // Red-black tree implementation of order book
 const RBTree = require('bintrees').RBTree;
-const { Subject } = require('rxjs');
+// Import necessary functions and operators from RxJS
+const { Subject, merge } = require('rxjs');
+const { bufferTime, map } = require('rxjs/operators');
 
 // Sort buy orders by descending price, then ascending order ID
 function compareBuyOrders(a, b) {
