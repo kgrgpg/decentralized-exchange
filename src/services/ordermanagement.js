@@ -62,6 +62,10 @@ function compareOrdersByTimeSeq(a, b) {
     }
     return new Date(a.timestamp) - new Date(b.timestamp);
   }
+  catch (error) {
+    console.error('Error comparing orders by timestamp and sequence number', error);
+    return 0;
+  }
 }
 
 const buyOrders = new RBTree(compareBuyOrders);
