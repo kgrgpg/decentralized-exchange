@@ -59,26 +59,33 @@ function deleteOrderFromBook(order) {
  */
 function matchAndExecuteOrder(newOrder) {
   const oppositeBook = newOrder.type === 'buy' ? sellOrders : buyOrders;
-  let match = oppositeBook.min();
+  let currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
 
-  while (match && ((newOrder.type === 'buy' && newOrder.price >= match.price) ||
-                   (newOrder.type === 'sell' && newOrder.price <= match.price))) {
-    if (newOrder.quantity <= match.quantity) {
-      console.log(`Full or partial match found for order ${newOrder.id} with ${match.id}, executing trade.`);
-      match.quantity -= newOrder.quantity;
-      if (match.quantity === 0) {
-        oppositeBook.remove(match);
-        ordersById.remove(match);
+  while (currentBestMatch) {
+    // Determine if current best match is valid based on order type and price
+    const isValidMatch = newOrder.type === 'buy' ? newOrder.price >= currentBestMatch.price 
+                                                  : newOrder.price <= currentBestMatch.price;
+
+    if (!isValidMatch) break;
+
+    if (newOrder.quantity <= currentBestMatch.quantity) {
+      console.log(`Full or partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+      currentBestMatch.quantity -= newOrder.quantity;
+      if (currentBestMatch.quantity === 0) {
+        oppositeBook.remove(currentBestMatch);
+        ordersById.remove(currentBestMatch.id);
       }
       newOrder.quantity = 0;
       break; // Order fully matched
     } else {
-      console.log(`Partial match found for order ${newOrder.id} with ${match.id}, executing trade.`);
-      newOrder.quantity -= match.quantity;
-      oppositeBook.remove(match);
-      ordersById.remove(match);
+      console.log(`Partial match found for order ${newOrder.id} with ${currentBestMatch.id}, executing trade.`);
+      newOrder.quantity -= currentBestMatch.quantity;
+      oppositeBook.remove(currentBestMatch);
+      ordersById.remove(currentBestMatch.id);
     }
-    match = oppositeBook.min(); // Find next potential match
+
+    // Move to next best match
+    currentBestMatch = newOrder.type === 'buy' ? oppositeBook.min() : oppositeBook.max();
   }
 
   if (newOrder.quantity > 0) {
@@ -86,6 +93,7 @@ function matchAndExecuteOrder(newOrder) {
     addOrderToBook(newOrder);
   }
 }
+
 
 function addOrder(order) {
   console.log(`Adding order: ${order.id}`);
