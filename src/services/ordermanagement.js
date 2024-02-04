@@ -4,6 +4,7 @@ const { update } = require('lodash');
 // Import necessary functions and operators from RxJS
 const { Subject, merge } = require('rxjs');
 const { bufferTime, map } = require('rxjs/operators');
+const Order = require('../models/Order');
 
 // Sort buy orders by descending price, then ascending order ID
 function compareBuyOrders(a, b) {
