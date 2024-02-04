@@ -11,13 +11,17 @@ const {
   emitDeleteOrder, 
   orderMatchedSubject$, 
   orderUpdatedSubject$, 
-  orderAddedSubject$ 
+  orderAddedSubject$,
+  orderRemovedSubject$,
+  synchronizeAddOrder,
+  synchronizeUpdateOrder,
+  synchronizeRemoveOrder
 } = require('../services/ordermanagement');
 const { fromEvent } = require('rxjs');
 const { filter, map } = require('rxjs/operators');
 
 const link = new Link({
-  grape: 'http://192.168.1.29:50001'
+  grape: 'http://192.168.1.29:60001'
 });
 link.start();
 

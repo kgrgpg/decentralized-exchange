@@ -427,4 +427,4 @@ function processOperation(operation) {
 }
 
 
-module.exports = { emitAddOrder, emitDeleteOrder, treeToArray, orderMatchedSubject$, orderUpdatedSubject$, orderAddedSubject$, synchronizeAddOrder, synchronizeUpdateOrder, synchronizeRemoveOrder};
+module.exports = { emitAddOrder, emitDeleteOrder, treeToArray, orderMatchedSubject$, orderUpdatedSubject$, orderAddedSubject$, orderRemovedSubject$, synchronizeAddOrder, synchronizeUpdateOrder, synchronizeRemoveOrder};
