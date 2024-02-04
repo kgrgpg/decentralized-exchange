@@ -311,4 +311,4 @@ function processOperation(operation) {
 }
 
 
-module.exports = { addOrder: addOrderAfterMatching, deleteOrder, emitAddOrder, emitDeleteOrder, treeToArray };
+module.exports = { emitAddOrder, emitDeleteOrder, treeToArray, orderMatchedSubject$, orderUpdatedSubject$, orderAddedSubject$};
