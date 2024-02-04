@@ -135,6 +135,13 @@ function matchAndExecuteOrder(newOrder) {
         if (currentBestMatch.quantity === 0) {
           oppositeBook.remove(currentBestMatch);
           ordersById.remove(currentBestMatch.id);
+
+          // Emit an event to indicate that the order has been fully exactly matched and removed
+          emitOrderRemoved({
+            orderId: currentBestMatch.id,
+            matchedWith: newOrder.id, // Including this for context might be helpful
+            executedQuantity: executedQuantity // This might not be necessary but could be useful for logging/auditing
+          });
         } else {
           // Emit the updated event for partial matches where the best match still has remaining quantity
           emitOrderUpdated({
@@ -234,6 +241,7 @@ function treeToArray(tree) {
 const orderMatchedSubject$ = new Subject();
 const orderUpdatedSubject$ = new Subject();
 const orderAddedSubject$ = new Subject();
+const orderRemovedSubject$ = new Subject();
 
 function emitOrderMatched(matchInfo) {
   orderMatchedSubject$.next({
@@ -269,6 +277,18 @@ function emitOrderAdded(orderInfo) {
       type: orderInfo.orderDetails.type,
       sequenceNumber: orderInfo.orderDetails.sequenceNumber,
       timestamp: orderInfo.orderDetails.timestamp
+    }
+  });
+}
+
+function emitOrderRemoved(removalInfo) {
+  orderRemovedSubject$.next({
+    action: 'order_removed',
+    data: {
+      orderId: removalInfo.orderId,
+      matchedWith: removalInfo.matchedWith,
+      executedQuantity: removalInfo.executedQuantity,
+      timestamp: new Date().toISOString()
     }
   });
 }

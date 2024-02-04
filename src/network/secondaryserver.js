@@ -13,6 +13,8 @@ const {
   orderUpdatedSubject$, 
   orderAddedSubject$ 
 } = require('../services/ordermanagement');
+const { fromEvent } = require('rxjs');
+const { filter, map } = require('rxjs/operators');
 
 const link = new Link({
   grape: 'http://192.168.1.29:50001'
@@ -54,34 +56,41 @@ peerSub.on('disconnected', () => {
   console.log('Subscription disconnected');
 });
 
-// Handle incoming messages
-peerSub.on('message', (msg) => {
-  console.log('Received Raw message:', msg);
-  try {
-    const parsedMsg = JSON.parse(msg);
-    const { action, data } = parsedMsg;
+// Convert PeerSub messages to an Observable stream
+const messageStream$ = fromEvent(peerSub, 'message');
 
-    console.log(`Received ${action} message:`, data);
-
+// Process and act on specific message types
+messageStream$.pipe(
+  map(msg => JSON.parse(msg)),
+  filter(({ action }) => action === 'order_added' || action === 'order_matched' || action === 'order_updated')
+).subscribe({
+  next: ({ action, data }) => {
+    // Handle the action appropriately
     switch (action) {
+      case 'order_added':
+        // Handle order added event
+        console.log(`New order added:`, data);
+        // synchronizeAddOrder(data); // Implement this function based on Step 2
+        break;
       case 'order_matched':
         // Handle order matched event
         console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
+        // synchronizeMatchOrder(data); // Similarly, implement synchronization logic for matching
         break;
       case 'order_updated':
         // Handle order updated event
         console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
+        // synchronizeUpdateOrder(data); // Implement update synchronization
         break;
-      case 'order_added':
-        // Handle order added event
-        console.log(`New order added:`, data);
+      case 'order_removed':
+        // Handle order removed event
+        console.log(`Order ${data.orderId} removed.`);
+        // synchronizeRemoveOrder(data); // Implement removal synchronization
         break;
-      default:
-        console.warn(`Unknown action type received: ${action}`);
     }
-  } catch (error) {
-    console.error('Error processing message:', error);
-  }
+  },
+  error: err => console.error('Error processing message:', err),
+  complete: () => console.log('Message stream completed')
 });
 
 serviceRPC.on('request', (rid, key, payload, handler) => {
@@ -128,4 +137,9 @@ orderUpdatedSubject$.subscribe(updateInfo => {
 // Subscribing to order added events and broadcasting them
 orderAddedSubject$.subscribe(addedInfo => {
   broadcastMessage(addedInfo); // addedInfo already includes action and data
+});
+
+// Subscribing to order removed events and broadcasting them
+orderRemovedSubject$.subscribe(removedInfo => {
+  broadcastMessage(removedInfo); // removedInfo already includes action and data
 });
