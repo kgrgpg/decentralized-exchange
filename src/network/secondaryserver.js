@@ -70,22 +70,22 @@ messageStream$.pipe(
       case 'order_added':
         // Handle order added event
         console.log(`New order added:`, data);
-        // synchronizeAddOrder(data); // Implement this function based on Step 2
+        synchronizeAddOrder(data); // Implement this function based on Step 2
         break;
       case 'order_matched':
         // Handle order matched event
         console.log(`Order ${data.orderId} matched with ${data.matchedWith}. Executed Quantity: ${data.executedQuantity}`);
-        // synchronizeMatchOrder(data); // Similarly, implement synchronization logic for matching
+        // Function for matching is not needed as it does not alter the order books in itself. Other three actions do.
         break;
       case 'order_updated':
         // Handle order updated event
         console.log(`Order ${data.orderId} updated. New Quantity: ${data.newQuantity}`);
-        // synchronizeUpdateOrder(data); // Implement update synchronization
+        synchronizeUpdateOrder(data); // Implement update synchronization
         break;
       case 'order_removed':
         // Handle order removed event
         console.log(`Order ${data.orderId} removed.`);
-        // synchronizeRemoveOrder(data); // Implement removal synchronization
+        synchronizeRemoveOrder(data); // Implement removal synchronization
         break;
     }
   },

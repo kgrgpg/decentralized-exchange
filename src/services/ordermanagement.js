@@ -308,6 +308,26 @@ function emitDeleteOrder(deletionInfo) {
   deleteOrderSubject$.next(deletionInfo); // deletionInfo should include { orderId, timestamp }
 }
 
+// Define subjects for synchronizing order books with other instances
+const syncOrderAddedSubject$ = new Subject();
+const syncOrderUpdatedSubject$ = new Subject();
+const syncOrderRemovedSubject$ = new Subject();
+
+//Function to synchronize order added events
+function synchronizeAddOrder(order) {
+  syncOrderAddedSubject$.next(order);
+}
+
+//Function to synchronize order updated events
+function synchronizeUpdateOrder(order) {
+  syncOrderUpdatedSubject$.next(order);
+}
+
+//Function to synchronize order removed events
+function synchronizeRemoveOrder(order) {
+  syncOrderRemovedSubject$.next(order);
+}
+
 // Merging the add and delete streams, buffer them, and then sort each batch before processing
 const orderOperationsStream$ = merge(
   addOrderSubject$.pipe(map(order => ({ operationType: 'add', payload: order }))), // Mark each order addition with a type
