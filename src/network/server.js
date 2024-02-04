@@ -11,7 +11,7 @@ const {
 } = require('../services/ordermanagement');
 
 const link = new Link({
-  grape: 'http://127.0.0.1:30001'
+  grape: 'http://192.168.1.18:30001'
 });
 link.start();
 
@@ -63,7 +63,7 @@ serviceRPC.on('request', (rid, key, payload, handler) => {
 
 const broadcastMessage = (message) => {
   // Directly use the message object which includes both action and data
-  servicePub.pub(message.action, JSON.stringify(message));
+  servicePub.pub(JSON.stringify(message));
 };
 
 // Subscribing to order matched events and broadcasting them
