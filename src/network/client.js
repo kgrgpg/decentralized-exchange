@@ -1,6 +1,6 @@
 const Link = require('grenache-nodejs-link');
 const { PeerRPCClient } = require('grenache-nodejs-ws');
-const Order = require('./order');
+const Order = require('../models/order');
 
 
 const link = new Link({

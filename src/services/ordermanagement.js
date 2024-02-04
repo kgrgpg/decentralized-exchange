@@ -1,6 +1,5 @@
 // Initialize three red-black trees: one for buy orders, one for sell orders, and one for orders sorted by ID.
 const RBTree = require('bintrees').RBTree;
-const Order = require('./models/order');
 
 function compareOrders(a, b) {
   return a.price - b.price;
